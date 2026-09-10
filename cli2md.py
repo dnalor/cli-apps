@@ -1,21 +1,22 @@
 import csv
+import string
+
 
 summary_template = """
-# Summary
+Summary:
 
-To date, **{n_apps}** apps/tools covered, organized in **{n_cats}** categories.
+* Apps/tools: **{n_apps}**
+* Categories: **{n_cats}**
 
-# Index
+# Contents
 
 {cats}
-
-Some links to [related resources](#resources).
 """
 
 resources_template = """
 # <a name="resources"></a>Related resources
 
-A list of some online resoures that contribute interesting links to apps and info.
+A list of some online resources that contribute interesting links to apps and info.
 
 {}
 """
@@ -34,9 +35,9 @@ def load_csv(file_name):
 def fmt_app(app):
     descr = ''.join(c if c != '\n' else ' ' for c in app['description'])
     if app['homepage'] != '':
-        st = '* [{}]({}) - {}'.format(app['name'], app['git'], descr)
-    elif app['git'] != '':
         st = '* [{}]({}) - {}'.format(app['name'], app['homepage'], descr)
+    elif app['git'] != '':
+        st = '* [{}]({}) - {}'.format(app['name'], app['git'], descr)
     else:
         st = '* {} - {}'.format(app['name'], descr)
     return st
@@ -56,10 +57,29 @@ def print_apps(cats, apps):
 
 
 def fmt_categories(cats):
+    group_by_letters = {x: [] for x in string.ascii_uppercase}
+    for c in cats:
+        initial = cats[c]['name'][0].upper()
+        group_by_letters[initial].append(c)
+    # print(group_by_letters)
+    strings_by_letters = {x: [] for x in string.ascii_uppercase}
+    for g in group_by_letters:
+        strings_by_letters[g] = [f"[{cats[c]['name']}](#{c}) ({cats[c]['count']})" for c in group_by_letters[g]]
+    lines_by_letters = {x: [] for x in string.ascii_uppercase}
+    # print(strings_by_letters)
+    for g in group_by_letters:
+        lines_by_letters[g] = ', '.join(strings_by_letters[g])
+    lines_to_join = ['* ' + lines_by_letters[key] for key in lines_by_letters if len(lines_by_letters[key])]
+    # print(lines_by_letters)
+    # print(lines_to_join)
+    return '\n'.join(lines_to_join)
+
+
+def fmt_categories_old(cats):
     st = []
     for c in cats:
         st.append("[{}](#{}) ({})".format(cats[c]['name'], c, cats[c]['count']))
-    return ' | '.join(st)
+    return ', '.join(st)
 
 
 def count_apps(apps, categories):
@@ -75,6 +95,7 @@ def count_apps(apps, categories):
 
 
 def categories_list_to_dict(category_list):
+    category_list = sorted(category_list, key=lambda d: d['name'])
     d = {}
     for c in category_list:
         d[c['label']] = {'name': c['name'], 'description': c['description']}
